@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TechMotion 3D: Dynamic Highway</title>
+    
+    <!-- GOOGLE ADMOB MOBILE ADS SDK -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-3947013574317892~5812479277" crossorigin="anonymous"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&display=swap');
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body { overflow: hidden; background: #020208; font-family: 'Orbitron', sans-serif; touch-action: none; display: flex; flex-direction: column; height: 100vh; justify-content: space-between; }
+
+        /* TECHMOTION HUD DASHBOARD */
+        #topDash {
+            position: absolute; top: 15px; left: 0; right: 0;
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 10; pointer-events: none; padding: 0 10px;
+        }
+        .dash-card {
+            background: rgba(10, 10, 25, 0.85); padding: 8px 16px; border-radius: 12px;
+            border: 1px solid rgba(0, 243, 255, 0.4); backdrop-filter: blur(8px);
+            text-align: center; min-width: 90px;
+        }
+        .dash-title { font-size: 9px; color: #88a; letter-spacing: 1px; }
+        .dash-val { font-size: 18px; font-weight: 900; color: #00f3ff; text-shadow: 0 0 10px #00f3ff; }
+
+        /* ANALOG SPEEDOMETER */
+        .speedo-box {
+            width: 90px; height: 90px; border-radius: 50%;
+            background: radial-gradient(circle, #0a0a15 60%, #00f3ff 100%);
+            border: 3px solid #00f3ff; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(0,243,255,0.4);
+        }
+        .speedo-brand { font-size: 7px; color: #00f3ff; letter-spacing: 1px; font-weight: bold; }
+        .speedo-num { font-size: 18px; font-weight: 900; color: #fff; }
+        .speedo-unit { font-size: 8px; color: #ff0055; font-weight: bold; }
+
+        /* CONTROLS COCKPIT */
+        #cockpit {
+            position: absolute; bottom: 60px; left: 0; right: 0; height: 160px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 0 20px; z-index: 12; pointer-events: auto;
+        }
+
+        /* STEERING WHEEL */
+        #steeringWheel {
+            width: 120px; height: 120px; border-radius: 50%;
+            border: 8px solid #222; background: radial-gradient(circle, #333 30%, #111 70%);
+            box-shadow: inset 0 0 10px #000, 0 0 15px rgba(0,243,255,0.3);
+            position: relative; transition: transform 0.05s linear; cursor: pointer;
+        }
+        #steeringWheel::before {
+            content: ''; position: absolute; top: 50%; left: 10%; right: 10%; height: 8px;
+            background: #555; transform: translateY(-50%); border-radius: 4px;
+        }
+        #steeringWheel::after {
+            content: ''; position: absolute; left: 50%; top: 10%; bottom: 50%; width: 8px;
+            background: #00f3ff; transform: translateX(-50%); border-radius: 4px;
+        }
+
+        /* PEDALS */
+        .pedal-group { display: flex; gap: 15px; align-items: flex-end; }
+        .pedal {
+            width: 55px; border-radius: 8px; background: linear-gradient(180deg, #444, #111);
+            border: 2px solid #666; display: flex; justify-content: center; align-items: center;
+            font-size: 10px; font-weight: bold; color: #fff; box-shadow: 0 5px 10px rgba(0,0,0,0.8);
+        }
+        .pedal-brake { height: 80px; border-color: #ff0055; background: linear-gradient(180deg, #600, #100); }
+        .pedal-accel { height: 110px; border-color: #00ff88; background: linear-gradient(180deg, #060, #010); }
+
+        #btnHorn {
+            width: 50px; height: 50px; border-radius: 50%; background: #ffd700;
+            border: 2px solid #fff; display: flex; justify-content: center; align-items: center;
+            font-size: 20px; box-shadow: 0 0 15px rgba(255,215,0,0.5); margin-bottom: 20px;
+        }
+
+        /* MENU SCREENS */
+        .screen-overlay {
+            position: absolute; inset: 0; z-index: 20;
+            background: radial-gradient(circle, rgba(15,15,30,0.95) 0%, rgba(2,2,8,0.98) 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(12px); color: #fff; text-align: center; padding: 25px;
+        }
+        .brand-tag { font-size: 0.85rem; letter-spacing: 4px; color: #00f3ff; font-weight: bold; margin-bottom: 5px; }
+        .game-title {
+            font-size: 2.2rem; font-weight: 900; letter-spacing: 2px;
+            background: linear-gradient(45deg, #00f3ff, #ff0055);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 15px; filter: drop-shadow(0 0 15px rgba(0,243,255,0.4));
+        }
+
+        /* MENU BUTTONS GRID */
+        .menu-btn-group {
+            display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 260px;
+        }
+        .btn-main {
+            padding: 14px 20px; font-family: 'Orbitron'; font-size: 0.9rem; font-weight: 900;
+            color: #fff; background: linear-gradient(45deg, #00f3ff, #ff0055);
+            border: none; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); transition: transform 0.2s;
+        }
+        .btn-sub {
+            padding: 10px 15px; font-family: 'Orbitron'; font-size: 0.75rem; font-weight: 700;
+            color: #00f3ff; background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.5); border-radius: 20px; cursor: pointer;
+        }
+        .btn-main:active, .btn-sub:active { transform: scale(0.95); }
+
+        /* TERMS & CONDITIONS */
+        .terms-box {
+            font-size: 10px; color: #889; max-width: 320px; margin-top: 25px;
+            line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;
+        }
+
+        /* BOTTOM AD CONTAINER */
+        #admob-banner-box {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 320px; height: 50px; background: #000; z-index: 99; display: flex;
+            justify-content: center; align-items: center;
+        }
+
+        /* INTERSTITIAL OVERLAY UI */
+        #interstitialAdOverlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            z-index: 999; flex-direction: column; justify-content: center; align-items: center; color: #fff;
+        }
+    </style>
+    <!-- THREE.JS ENGINE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <!-- DASHBOARD UI -->
+    <div id="topDash">
+        <div class="dash-card">
+            <div class="dash-title">SCORE</div>
+            <div class="dash-val" id="scoreVal">0</div>
+        </div>
+
+        <div class="speedo-box">
+            <div class="speedo-brand">TECHMOTION</div>
+            <div class="speedo-num" id="speedoNum">0</div>
+            <div class="speedo-unit">KM/H</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-title">STAGE</div>
+            <div class="dash-val" id="stageVal" style="color:#ff0055;">STAGE 1</div>
+        </div>
+    </div>
+
+    <!-- COCKPIT CONTROLS -->
+    <div id="cockpit">
+        <div id="steeringWheel"></div>
+        <div style="display: flex; gap: 12px; align-items: flex-end;">
+            <div id="btnHorn">📢</div>
+            <div class="pedal-group">
+                <div class="pedal pedal-brake" id="btnBrake">BRAKE</div>
+                <div class="pedal pedal-accel" id="btnAccel">GAS</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- START MENU SCREEN -->
+    <div class="screen-overlay" id="startMenu">
+        <div class="brand-tag">TECHMOTION PRESENTS</div>
+        <div class="game-title">SPEED RACER 3D</div>
+
+        <div class="menu-btn-group">
+            <button class="btn-main" onclick="GameApp.startGame()">START RACE</button>
+            <button class="btn-sub" onclick="GameApp.toggleCarColor()">🎨 GARAGE: <span id="carColorText">NEON RED</span></button>
+            <button class="btn-sub" onclick="GameApp.toggleSensitivity()">⚙️ STEERING: <span id="sensText">MEDIUM</span></button>
+        </div>
+
+        <div class="terms-box">
+            By proceeding, you agree to TechMotion <span style="color:#00f3ff;">Terms of Service</span> & <span style="color:#00f3ff;">Privacy Policy</span>. All rights reserved © 2026.
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div class="screen-overlay" id="gameOverMenu" style="display: none;">
+        <div class="brand-tag">TECHMOTION</div>
+        <div class="game-title" style="background: linear-gradient(45deg, #ff0055, #ff5500); -webkit-background-clip: text;">CRASHED!</div>
+        <p style="margin-bottom: 20px;">FINAL SCORE: <span id="finalScore" style="color:#00f3ff; font-weight: bold;">0</span></p>
+        <button class="btn-main" onclick="GameApp.restartGame()">TRY AGAIN</button>
+    </div>
+
+    <!-- INTERSTITIAL FULL SCREEN AD OVERLAY -->
+    <div id="interstitialAdOverlay">
+        <p style="font-size: 10px; color: #888; margin-bottom: 10px;">SPONSORED ADVERTISEMENT</p>
+        <h3 style="color: #00f3ff; font-size: 18px;">AdMob Full Screen Interstitial Ad</h3>
+        <p style="font-size: 10px; color: #555; margin-top: 5px;">ID: ca-app-pub-3947013574317892/6865826638</p>
+        <button class="btn-main" style="margin-top: 20px; font-size: 0.75rem;" onclick="closeAdOverlay()">CLOSE AD</button>
+    </div>
+
+    <!-- BOTTOM BANNER AD CONTAINER -->
+    <div id="admob-banner-box">
+        <ins class="adsbygoogle"
+             style="display:inline-block;width:320px;height:50px"
+             data-ad-client="ca-app-pub-3947013574317892~5812479277"
+             data-ad-slot="4115686003"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <script>
+        // ADMOB INTERSTITIAL AD TRIGGER LOGIC
+        function showAdmobInterstitial() {
+            document.getElementById('interstitialAdOverlay').style.display = 'flex';
+        }
+        function closeAdOverlay() {
+            document.getElementById('interstitialAdOverlay').style.display = 'none';
+        }
+
+        // DECENT SOUND SYNTHESIZER ENGINE
+        const SoundEngine = {
+            ctx: null, engineOsc: null, engineGain: null, hornOsc: null,
+            init() {
+                if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            startEngine() {
+                if(!this.ctx || this.engineOsc) return;
+                this.engineOsc = this.ctx.createOscillator();
+                this.engineGain = this.ctx.createGain();
+                this.engineOsc.type = 'triangle';
+                this.engineOsc.frequency.setValueAtTime(30, this.ctx.currentTime);
+                this.engineGain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 400;
+
+                this.engineOsc.connect(filter);
+                filter.connect(this.engineGain);
+                this.engineGain.connect(this.ctx.destination);
+                this.engineOsc.start();
+            },
+            updateEngine(speed) {
+                if(this.engineOsc) {
+                    this.engineOsc.frequency.setValueAtTime(30 + speed * 120, this.ctx.currentTime);
+                }
+            },
+            playHorn(start) {
+                if(!this.ctx) return;
+                if(start) {
+                    if(this.hornOsc) return;
+                    this.hornOsc = this.ctx.createOscillator();
+                    let gain = this.ctx.createGain();
+                    this.hornOsc.type = 'sine';
+                    this.hornOsc.frequency.setValueAtTime(380, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    this.hornOsc.connect(gain); gain.connect(this.ctx.destination);
+                    this.hornOsc.start();
+                } else if(this.hornOsc) {
+                    this.hornOsc.stop(); this.hornOsc = null;
+                }
+            },
+            playCrash() {
+                if(!this.ctx) return;
+                let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.5);
+            }
+        };
+
+        const GameApp = {
+            scene: null, camera: null, renderer: null,
+            playerCar: null, carBodyMesh: null, traffic: [], roadLines: [], barriers: [],
+            score: 0, speed: 0, targetSpeed: 0, playerX: 0, steerAngle: 0,
+            stage: 1, isRunning: false, pedalPressed: false,
+            
+            carColors: [0xff0055, 0x00f3ff, 0xffd700, 0x00ff88],
+            carColorNames: ["NEON RED", "CYBER BLUE", "GOLD", "LIME GREEN"],
+            colorIdx: 0,
+            steerSens: 0.15,
+            sensNames: ["LOW", "MEDIUM", "HIGH"],
+            sensIdx: 1,
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x020208);
+                this.scene.fog = new THREE.FogExp2(0x020208, 0.012);
+
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                document.body.appendChild(this.renderer.domElement);
+
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+                const dirLight = new THREE.DirectionalLight(0x00f3ff, 0.8);
+                dirLight.position.set(0, 40, -40);
+                this.scene.add(dirLight);
+
+                this.createEnvironment();
+                this.playerCar = this.createCar(this.carColors[0], true);
+                this.scene.add(this.playerCar);
+
+                this.camera.position.set(0, 3.2, 6.5);
+                this.camera.lookAt(0, 1, -10);
+
+                this.bindControls();
+                setInterval(() => { if(this.isRunning) this.spawnTraffic(); }, 1000);
+            },
+
+            toggleCarColor() {
+                this.colorIdx = (this.colorIdx + 1) % this.carColors.length;
+                document.getElementById('carColorText').innerText = this.carColorNames[this.colorIdx];
+                if(this.carBodyMesh) {
+                    this.carBodyMesh.material.color.setHex(this.carColors[this.colorIdx]);
+                }
+            },
+
+            toggleSensitivity() {
+                this.sensIdx = (this.sensIdx + 1) % 3;
+                document.getElementById('sensText').innerText = this.sensNames[this.sensIdx];
+                this.steerSens = [0.08, 0.15, 0.25][this.sensIdx];
+            },
+
+            createEnvironment() {
+                const roadMat = new THREE.MeshStandardMaterial({ color: 0x0a0a14, roughness: 0.8 });
+                const road = new THREE.Mesh(new THREE.PlaneGeometry(16, 1000), roadMat);
+                road.rotation.x = -Math.PI / 2;
+                this.scene.add(road);
+
+                [-8.1, 8.1].forEach(x => {
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 1000), new THREE.MeshBasicMaterial({ color: 0x00f3ff }));
+                    b.position.set(x, 0.3, 0);
+                    this.scene.add(b);
+                    this.barriers.push(b);
+                });
+
+                for(let z = -500; z < 500; z += 12) {
+                    [-2.6, 2.6].forEach(x => {
+                        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                        line.rotation.x = -Math.PI / 2;
+                        line.position.set(x, 0.02, z);
+                        this.scene.add(line);
+                        this.roadLines.push(line);
+                    });
+                }
+            },
+
+            createCar(colorHex, isPlayer = false) {
+                const car = new THREE.Group();
+                const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.5 });
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.8), bodyMat);
+                body.position.y = 0.5;
+                car.add(body);
+
+                if(isPlayer) this.carBodyMesh = body;
+
+                const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 1.8), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+                cabin.position.set(0, 0.95, -0.2);
+                car.add(cabin);
+
+                return car;
+            },
+
+            spawnTraffic() {
+                const colors = [0xffd700, 0x00ff88, 0x9900ff, 0xffffff];
+                const enemy = this.createCar(colors[Math.floor(Math.random() * colors.length)]);
+                const lanes = [-5.5, -1.8, 1.8, 5.5];
+                enemy.position.set(lanes[Math.floor(Math.random() * lanes.length)], 0, -150);
+                this.scene.add(enemy);
+                this.traffic.push(enemy);
+            },
+
+            bindControls() {
+                const wheel = document.getElementById('steeringWheel');
+                let dragging = false, startX = 0;
+
+                wheel.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX; });
+                window.addEventListener('pointermove', (e) => {
+                    if(!dragging) return;
+                    let diff = e.clientX - startX;
+                    this.steerAngle = Math.max(-90, Math.min(90, diff));
+                    wheel.style.transform = `rotate(${this.steerAngle}deg)`;
+                });
+                window.addEventListener('pointerup', () => {
+                    dragging = false; this.steerAngle = 0;
+                    wheel.style.transform = `rotate(0deg)`;
+                });
+
+                const gas = document.getElementById('btnAccel');
+                const brake = document.getElementById('btnBrake');
+                const horn = document.getElementById('btnHorn');
+
+                gas.addEventListener('pointerdown', () => { this.targetSpeed = 2.0; this.pedalPressed = true; });
+                gas.addEventListener('pointerup', () => { this.targetSpeed = 0.0; this.pedalPressed = false; });
+                brake.addEventListener('pointerdown', () => this.targetSpeed = 0.0);
+
+                horn.addEventListener('pointerdown', () => SoundEngine.playHorn(true));
+                horn.addEventListener('pointerup', () => SoundEngine.playHorn(false));
+            },
+
+            startGame() {
+                SoundEngine.init();
+                SoundEngine.startEngine();
+                document.getElementById('startMenu').style.display = 'none';
+                this.isRunning = true;
+                this.animate();
+            },
+
+            checkStageProgression() {
+                if(this.score >= 100 && this.stage === 1) {
+                    this.stage = 2;
+                    document.getElementById('stageVal').innerText = "STAGE 2";
+                    document.getElementById('stageVal').style.color = "#00f3ff";
+                    this.barriers.forEach(b => b.material.color.setHex(0xff0055));
+                } else if(this.score >= 250 && this.stage === 2) {
+                    this.stage = 3;
+                    document.getElementById('stageVal').innerText = "STAGE 3";
+                    document.getElementById('stageVal').style.color = "#ffd700";
+                    this.barriers.forEach(b => b.material.color.setHex(0xffd700));
+                }
+            },
+
+            animate() {
+                if (!this.isRunning) return;
+                requestAnimationFrame(() => this.animate());
+
+                if (this.pedalPressed) {
+                    this.speed += (this.targetSpeed - this.speed) * 0.03;
+                } else {
+                    this.speed += (0 - this.speed) * 0.02;
+                }
+
+                SoundEngine.updateEngine(this.speed);
+                document.getElementById('speedoNum').innerText = Math.round(this.speed * 110);
+
+                this.playerX += (this.steerAngle / 90) * (this.speed * this.steerSens);
+                this.playerX = Math.max(-5.8, Math.min(5.8, this.playerX));
+                this.playerCar.position.x = this.playerX;
+                this.playerCar.rotation.z = -(this.steerAngle / 90) * 0.2;
+
+                this.camera.position.x += (this.playerCar.position.x - this.camera.position.x) * 0.1;
+                this.camera.lookAt(this.playerCar.position.x * 0.8, 1, -10);
+
+                this.roadLines.forEach(l => {
+                    l.position.z += this.speed * 1.5;
+                    if(l.position.z > 20) l.position.z -= 1000;
+                });
+
+                for(let i = this.traffic.length - 1; i >= 0; i--) {
+                    let e = this.traffic[i];
+                    e.position.z += this.speed * 1.3;
+
+                    if(Math.abs(e.position.x - this.playerCar.position.x) < 1.6 && Math.abs(e.position.z - this.playerCar.position.z) < 3.2) {
+                        this.gameOver();
+                    }
+
+                    if(e.position.z > 15) {
+                        this.scene.remove(e);
+                        this.traffic.splice(i, 1);
+                        this.score += 10;
+                        document.getElementById('scoreVal').innerText = this.score;
+                        this.checkStageProgression();
+                    }
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            },
+
+            gameOver() {
+                SoundEngine.playCrash();
+                this.isRunning = false;
+                document.getElementById('finalScore').innerText = this.score;
+                document.getElementById('gameOverMenu').style.display = 'flex';
+                
+                // SHOW ADMOB INTERSTITIAL AD ON CRASH
+                showAdmobInterstitial();
+            },
+
+            restartGame() {
+                this.traffic.forEach(e => this.scene.remove(e));
+                this.traffic = []; this.score = 0; this.speed = 0; this.playerX = 0;
+                this.stage = 1;
+                document.getElementById('stageVal').innerText = "STAGE 1";
+                document.getElementById('stageVal').style.color = "#ff0055";
+                this.barriers.forEach(b => b.material.color.setHex(0x00f3ff));
+                this.playerCar.position.x = 0;
+                this.camera.position.x = 0;
+                document.getElementById('scoreVal').innerText = '0';
+                document.getElementById('gameOverMenu').style.display = 'none';
+                this.isRunning = true;
+                this.animate();
+            }
+        };
+
+        window.onload = () => GameApp.init();
+    </script>
+</body>
+</html>
